@@ -1,0 +1,111 @@
+sudo su - hadoop
+
+ping master
+ping slave1
+ping slave2
+
+start-all.sh
+
+pip install Kaggle
+
+pip install dask[complete]
+pip install pandas --upgrade
+pip uninstall numpy
+pip install numpy==1.23.1
+
+pip install textblob
+
+kaggle datasets download -d cynthiarempel/amazon-us-customer-reviews-dataset -f amazon_reviews_multilingual_US_v1_00.tsv
+kaggle datasets download -d cynthiarempel/amazon-us-customer-reviews-dataset -f amazon_reviews_us_Music_v1_00.tsv
+kaggle datasets download -d cynthiarempel/amazon-us-customer-reviews-dataset -f amazon_reviews_us_PC_v1_00.tsv
+kaggle datasets download -d cynthiarempel/amazon-us-customer-reviews-dataset -f amazon_reviews_us_Video_DVD_v1_00.tsv
+kaggle datasets download -d cynthiarempel/amazon-us-customer-reviews-dataset -f amazon_reviews_us_Wireless_v1_00.tsv
+
+unzip amazon_reviews_multilingual_US_v1_00.tsv 
+unzip amazon_reviews_us_Music_v1_00.tsv
+unzip amazon_reviews_us_PC_v1_00.tsv
+unzip amazon_reviews_us_Video_DVD_v1_00.tsv
+unzip amazon_reviews_us_Wireless_v1_00.tsv
+
+nano extract_reviews.py
+chmod +x extract_reviews.py
+
+python3 extract_reviews.py /home/hadoop/assignment/amazon_reviews_us_Wireless_v1_00.tsv wireless_reviews_only.tsv
+python3 extract_reviews.py /home/hadoop/assignment/amazon_reviews_us_Video_DVD_v1_00.tsv video_dvd_reviews_only.tsv
+python3 extract_reviews.py /home/hadoop/assignment/amazon_reviews_us_PC_v1_00.tsv pc_reviews_only.tsv
+python3 extract_reviews.py /home/hadoop/assignment/amazon_reviews_us_Music_v1_00.tsv music_reviews_only.tsv
+python3 extract_reviews.py /home/hadoop/assignment/amazon_reviews_multilingual_US_v1_00.tsv multilingual_us_reviews_only.tsv
+
+nano clean_text.py
+chmod +x clean_text.py
+
+python3 clean_text.py wireless_reviews_only.tsv cleaned_wireless_reviews_only.tsv
+python3 clean_text.py video_dvd_reviews_only.tsv cleaned_video_dvd_reviews_only.tsv
+python3 clean_text.py pc_reviews_only.tsv cleaned_pc_reviews_only.tsv
+python3 clean_text.py music_reviews_only.tsv cleaned_music_reviews_only.tsv
+python3 clean_text.py multilingual_us_reviews_only.tsv cleaned_multilingual_us_reviews_only.tsv
+
+time hadoop fs -put cleaned_wireless_reviews_only.tsv /user/hadoop
+time hadoop fs -put cleaned_video_dvd_reviews_only.tsv /user/hadoop
+time hadoop fs -put cleaned_pc_reviews_only.tsv /user/hadoop
+time hadoop fs -put cleaned_music_reviews_only.tsv /user/hadoop
+time hadoop fs -put cleaned_multilingual_us_reviews_only.tsv /user/hadoop
+
+
+nano wordcount_mapper.py
+nano wordcount_reducer.py
+chmod +x wordcount_mapper.py
+chmod +x wordcount_reducer.py
+
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input cleaned_wireless_reviews_only.tsv -output wireless_wc_result -file wordcount_mapper.py -file wordcount_reducer.py -mapper wordcount_mapper.py -reducer wordcount_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input cleaned_video_dvd_reviews_only.tsv -output video_dvd_wc_result -file wordcount_mapper.py -file wordcount_reducer.py -mapper wordcount_mapper.py -reducer wordcount_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input cleaned_pc_reviews_only.tsv -output pc_wc_result -file wordcount_mapper.py -file wordcount_reducer.py -mapper wordcount_mapper.py -reducer wordcount_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input cleaned_music_reviews_only.tsv -output music_wc_result -file wordcount_mapper.py -file wordcount_reducer.py -mapper wordcount_mapper.py -reducer wordcount_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input cleaned_multilingual_us_reviews_only.tsv -output multilingual_us_wc_result -file wordcount_mapper.py -file wordcount_reducer.py -mapper wordcount_mapper.py -reducer wordcount_reducer.py
+
+nano sort_wordcount.py
+chmod +x sort_wordcount.py
+
+hadoop fs -cat wireless_wc_result/part-00000 | python3 sort_wordcount.py > sorted_wireless_wordcounts.tsv
+hadoop fs -cat video_dvd_wc_result/part-00000 | python3 sort_wordcount.py > sorted_video_dvd_wordcounts.tsv
+hadoop fs -cat pc_wc_result/part-00000 | python3 sort_wordcount.py > sorted_pc_wordcounts.tsv
+hadoop fs -cat music_wc_result/part-00000 | python3 sort_wordcount.py > sorted_music_wordcounts.tsv
+hadoop fs -cat multilingual_us_wc_result/part-00000 | python3 sort_wordcount.py > sorted_multilingual_us_wordcounts.tsv
+
+cat sorted_wireless_wordcounts.tsv
+cat sorted_video_dvd_wordcounts.tsv
+cat sorted_pc_wordcounts.tsv
+cat sorted_music_wordcounts.tsv
+cat sorted_multilingual_us_wordcounts.tsv
+
+nano sentiment.py
+chmod +x sentiment.py
+
+python3 sentiment.py cleaned_wireless_reviews_only.tsv wireless_sentiment.tsv
+python3 sentiment.py cleaned_video_dvd_reviews_only.tsv video_dvd_sentiment.tsv
+python3 sentiment.py cleaned_pc_reviews_only.tsv pc_sentiment.tsv
+python3 sentiment.py cleaned_music_reviews_only.tsv music_sentiment.tsv
+python3 sentiment.py cleaned_multilingual_us_reviews_only.tsv multilingual_us_sentiment.tsv
+
+time hadoop fs -put wireless_sentiment.tsv /user/hadoop
+time hadoop fs -put video_dvd_sentiment.tsv /user/hadoop
+time hadoop fs -put pc_sentiment.tsv /user/hadoop
+time hadoop fs -put music_sentiment.tsv /user/hadoop
+time hadoop fs -put multilingual_us_sentiment.tsv /user/hadoop
+  
+nano sentiment_mapper.py
+nano sentiment_reducer.py
+chmod +x sentiment_mapper.py
+chmod +x sentiment_reducer.py
+
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input wireless_sentiment.tsv -output wireless_senti_result -file sentiment_mapper.py -file sentiment_reducer.py -mapper sentiment_mapper.py -reducer sentiment_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input video_dvd_sentiment.tsv -output video_dvd_senti_result -file sentiment_mapper.py -file sentiment_reducer.py -mapper sentiment_mapper.py -reducer sentiment_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input pc_sentiment.tsv -output pc_senti_result -file sentiment_mapper.py -file sentiment_reducer.py -mapper sentiment_mapper.py -reducer sentiment_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input music_sentiment.tsv -output music_senti_result -file sentiment_mapper.py -file sentiment_reducer.py -mapper sentiment_mapper.py -reducer sentiment_reducer.py
+hadoop jar /home/hadoop/hadoop-3.2.2/share/hadoop/tools/lib/hadoop-streaming-3.2.2.jar -input multilingual_us_sentiment.tsv -output multilingual_us_senti_result -file sentiment_mapper.py -file sentiment_reducer.py -mapper sentiment_mapper.py -reducer sentiment_reducer.py
+
+hadoop fs -cat wireless_senti_result/part-00000 
+hadoop fs -cat video_dvd_senti_result/part-00000 
+hadoop fs -cat pc_senti_result/part-00000 
+hadoop fs -cat music_senti_result/part-00000 
+hadoop fs -cat multilingual_us_senti_result/part-00000 
