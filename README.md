@@ -1,2 +1,2 @@
-# bigDataAnalytics
-MapReduce and non-mapReduce algorithms
+# Big Data Analytics in the Cloud
+MapReduce and non-MapReduce algorithms
