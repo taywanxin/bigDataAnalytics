@@ -57,7 +57,7 @@ def main():
     # Load the TSV file into a DataFrame
     print("Loading the TSV file into a DataFrame...")
     columns_to_keep = ['review_body']  # Specify columns if needed
-    df = pd.read_csv('extracted_files/amazon_reviews_multilingual_US_v1_00.tsv', 
+    df = pd.read_csv('extracted_files/amazon_reviews_us_Wireless_v1_00.tsv', 
                      usecols=columns_to_keep, sep='\t', on_bad_lines='skip')
     
     print(f"Initial DataFrame shape: {df.shape}")
